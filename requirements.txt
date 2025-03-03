@@ -1,0 +1,28 @@
+# Core dependencies
+asyncio>=3.4.3
+aiohttp>=3.11.0
+python-dotenv>=1.0.0
+greenlet>=2.0.0
+
+# Database
+asyncpg>=0.30.0
+sqlalchemy[asyncio]>=2.0.0
+alembic>=1.14.0
+
+# Document generation
+python-pptx>=0.6.21
+reportlab>=4.0.0
+markdown>=3.0.0
+pdfkit>=1.0.0
+
+# CLI
+rich>=13.0.0
+typer>=0.9.0
+
+# API integrations
+crewai>=0.10.0
+crewai-tools>=0.0.10
+google-generativeai>=0.3.0
+
+# Additional dependencies
+pydantic>=2.0.0  # Fixing pydantic deprecation warnings
