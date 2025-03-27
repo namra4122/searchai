@@ -198,24 +198,16 @@ def history(
     """
     try:
         # Create a new event loop for this command
-        #debugging_logs
-        logger.debug("---------- searchai/cli/interface.py - history() - start ----------")
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
         try:
-            #debugging_logs
-            logger.debug("---------- searchai/cli/interface.py - new_event_loop() - start ----------")
             # Run the history retrieval
             loop.run_until_complete(show_history(limit))
         finally:
-            #debugging_logs
-            logger.debug("---------- searchai/cli/interface.py - new_event_loop() - ended ----------")
             loop.close()
             
     except Exception as e:
-        #debugging_logs
-        logger.error(f"---------- searchai/cli/interface.py - history err {e} ----------")
         console.print(f"[red]Error:[/red] {str(e)}")
         raise typer.Exit(1)
 
@@ -223,15 +215,11 @@ async def show_history(limit: int):
     """
     Display search query history.
     """
-    #debugging_logs
-    logger.debug("---------- searchai/cli/interface.py - show_history() - start ----------")
     # Initialize database
     await db_handler.init_db()
     
     # Get recent queries
     queries = await db_handler.get_query_history(limit)
-    #debugging_logs
-    logger.debug(f"---------- searchai/cli/interface.py - recent queries:{queries} ----------")
     
     if not queries:
         console.print("[yellow]No search history found.[/yellow]")
@@ -262,15 +250,11 @@ async def show_history(limit: int):
         )
     
     console.print(table)
-    #debugging_logs
-    logger.debug("---------- searchai/cli/interface.py - show_history() - end ----------")
 
 def display_search_results(results):
     """
     Display a summary of search results.
     """
-    #debugging_logs
-    logger.debug("---------- searchai/cli/interface.py - display_search_results() - start ----------")
     table = Table(title="Search Results")
     table.add_column("Title", style="cyan")
     table.add_column("Source", style="blue")
@@ -282,8 +266,6 @@ def display_search_results(results):
         )
     
     console.print(table)
-    #debugging_logs
-    logger.debug("---------- searchai/cli/interface.py - display_search_results() - end ----------")
 
 if __name__ == "__main__":
     app()

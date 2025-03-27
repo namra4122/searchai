@@ -34,7 +34,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Search Settings
 MAX_CONCURRENT_SEARCHES = 1
-SEARCH_TIMEOUT = 60  # seconds
+SEARCH_TIMEOUT = 2  # seconds
 
 # Model settings
 CREWAI_GEMINI_MODEL = "gemini/gemini-1.5-pro-latest"

@@ -1,8 +1,6 @@
 .DS_Store
 .cursorrules
 
-generated_output/
-
 logs/
 
 # Byte-compiled / optimized / DLL files

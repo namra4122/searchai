@@ -4,6 +4,7 @@ Handles web searches using Crew AI tools.
 """
 
 import asyncio
+from tabnanny import verbose
 import time
 from typing import List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor
@@ -13,7 +14,6 @@ from crewai_tools import SerperDevTool
 
 from searchai.config import (
     SERPER_API_KEY,
-    MAX_CONCURRENT_SEARCHES,
     SEARCH_TIMEOUT,
     CREWAI_GEMINI_MODEL
 )
@@ -21,7 +21,7 @@ from searchai.db import db_handler
 
 # Configure logging
 from searchai.utils.logging_config import get_logger
-from searchai.utils.exceptions import SearchError, APIError, DatabaseError, ConfigurationError
+from searchai.utils.exceptions import SearchError, DatabaseError, ConfigurationError
 from searchai.utils.validation import validate_query
 
 logger = get_logger(__name__)
@@ -43,7 +43,7 @@ class CrewSearchEngine:
             self.search_tool = SerperDevTool(api_key=SERPER_API_KEY)
             logger.info("Serper API connection successful")
             
-            self.executor = ThreadPoolExecutor(max_workers=1)
+            self.executor = ThreadPoolExecutor(max_workers=4)
             
         except Exception as e:
             raise ConfigurationError(f"Failed to initialize search engine: {str(e)}")
@@ -53,29 +53,24 @@ class CrewSearchEngine:
         Run the crew in a separate thread.
         """
         try:
-            #debugging_logs
-            logger.debug("---------- searchai/search/crew_search.py - _run_crew() - start ----------")
+            logger.error(f"-------------------query = {query}-------------------")
+            logger.error("-------------------_run_crew start-------------------")
             # Create a researcher agent with specific configuration
-            #debugging_logs
-            logger.debug("---------- searchai/search/crew_search.py - researcher agent - start----------")
+            logger.error("-------------------researcher init _run_crew-------------------")
             researcher = Agent(
                 role="Web Researcher",
                 goal="Find accurate and relevant information from credible sources",
                 backstory="You are an expert web researcher specializing in finding and analyzing information from reliable sources.",
-                tools=[self.search_tool],
                 llm=CREWAI_GEMINI_MODEL,
-                verbose=False,
+                verbose=True,
                 allow_delegation=False
             )
-            #debugging_logs
-            logger.debug("---------- searchai/search/crew_search.py - researcher agent - start----------")
+            logger.error("-------------------researcher init done _run_crew-------------------")
             
             # Create a search task with clear expectations
-            #debugging_logs
-            logger.debug("---------- searchai/search/crew_search.py - search task - start----------")
+            logger.error("-------------------search_task init _run_crew-------------------")
             search_task = Task(
                 description=f"""Use the SerperDevTool to search for: {query}
-                
                 Instructions:
                 1. Use the search tool to find relevant results
                 2. For each result found, format it as follows:
@@ -87,21 +82,21 @@ class CrewSearchEngine:
                 expected_output="A list of search results formatted with URL, title and summary, separated by blank lines",
                 agent=researcher
             )
-                # context=[f"Search query: {query}", "Focus on recent and reliable sources", "Return results in the exact format specified"], 
-
-            #debugging_logs
-            logger.debug("---------- searchai/search/crew_search.py - search task - end ----------")
+            logger.error("-------------------search_task init done _run_crew-------------------")
             
             # Configure and execute the crew
+            logger.error("-------------------crew init _run_crew-------------------")
             crew = Crew(
                 agents=[researcher],
                 tasks=[search_task],
-                process=Process.sequential,
                 verbose=True
             )
+            logger.error("-------------------crew init done _run_crew-------------------")
             
             # Execute with timeout
+            logger.error("-------------------crew start _run_crew-------------------")
             result = crew.kickoff()
+            logger.error("-------------------crew done _run_crew-------------------")
             return result
             
         except Exception as e:
@@ -114,7 +109,9 @@ class CrewSearchEngine:
         """
         try:
             # Validate query
+            logger.error(f"----------validate_query start in search----------")
             validated_query = validate_query(query)
+            logger.error(f"----------validate_query end in search, string : {validated_query}----------")
             
             start_time = time.time()
             logger.info(f"Starting web search for query: {validated_query}")
@@ -124,10 +121,12 @@ class CrewSearchEngine:
             
             # Run the crew with timeout
             try:
+                logger.error(f"----------search start in search----------")
                 results = await asyncio.wait_for(
                     loop.run_in_executor(self.executor, self._run_crew, validated_query),
                     timeout=SEARCH_TIMEOUT
                 )
+                logger.error(f"----------search end in search----------")
             except asyncio.TimeoutError:
                 raise SearchError(f"Search timed out after {SEARCH_TIMEOUT} seconds")
             
@@ -240,10 +239,14 @@ async def perform_web_search(query: str) -> List[Dict[str, Any]]:
         
         try:
             # Perform search
+            logger.error(f"----------search start in perform_web_search----------")
             results = await search_engine.search(query)
+            logger.error(f"----------search end in perform_web_search----------")
             
             # Store results
+            logger.error(f"----------store searcn start in perform_web_search----------")
             await db_handler.store_search_results(user_query.id, results)
+            logger.error(f"----------store searcn end in perform_web_search----------")
             
             # Update status to completed
             await db_handler.update_query_status(user_query.id, "completed")

@@ -65,8 +65,7 @@ class GeminiReasoner:
         Returns:
             str: Generated document content
         """
-        #debugging_logs
-        logger.debug("---------- searchai/reasoning/gemini_llm.py - generate_content() - start ----------")
+
         logger.info(f"Generating content for query: {query}")
         start_time = time.time()
         
@@ -77,15 +76,12 @@ class GeminiReasoner:
             
             # Prepare the prompt for Gemini
             prompt = self._create_prompt(query, search_results, output_format)
-            #debugging_logs
-            logger.debug(f"---------- searchai/reasoning/gemini_llm.py - generate_content() - prompt: {prompt} ----------")
+
             
             # Set generation config based on output format
-            #debugging_logs
-            logger.debug("---------- searchai/reasoning/gemini_llm.py - generate_content() - _get_generation_config - start ----------")
+
             generation_config = self._get_generation_config(output_format)
-            #debugging_logs
-            logger.debug("---------- searchai/reasoning/gemini_llm.py - generate_content() - _get_generation_config - end ----------")
+
             
             # Run Gemini in a separate thread to avoid blocking the event loop
             loop = asyncio.get_running_loop()
@@ -104,8 +100,7 @@ class GeminiReasoner:
                 raise LLMError("Model generated empty response")
             
             content = response.text
-            #debugging_logs
-            logger.debug("---------- searchai/reasoning/gemini_llm.py - generate_content() - end ----------")
+
             duration = time.time() - start_time
             logger.info(f"Content generation completed in {duration:.2f} seconds")
             
@@ -128,8 +123,7 @@ class GeminiReasoner:
         Returns:
             str: Formatted prompt for Gemini
         """
-        #debugging_logs
-        logger.debug("---------- searchai/reasoning/gemini_llm.py - _create_prompt() - start ----------")
+
         # Format search results as a string
         results_text = ""
         for i, result in enumerate(search_results, 1):
@@ -157,8 +151,7 @@ class GeminiReasoner:
         
         Write the document now.
         """
-        #debugging_logs
-        logger.debug("---------- searchai/reasoning/gemini_llm.py - _create_prompt() - end ----------")
+
         
         return prompt
     
@@ -317,24 +310,20 @@ async def process_with_gemini(query: str, search_results: List[Dict[str, Any]], 
     Returns:
         str: Generated document content
     """
-    #debugging_logs
-    logger.debug("---------- searchai/reasoning/gemini_llm.py - process_with_gemini() - start ----------")
+
     
     # Validate search_results
     if not isinstance(search_results, list):
         logger.error(f"Invalid search_results type: {type(search_results)}")
         search_results = [search_results] if search_results else []
     
-    #debugging_logs
-    logger.debug("---------- searchai/reasoning/gemini_llm.py - process_with_gemini() - reasoner start ----------")
+
     reasoner = GeminiReasoner()
-    #debugging_logs
-    logger.debug("---------- searchai/reasoning/gemini_llm.py - process_with_gemini() - reasoner end ----------")
+
     
     try:
         # Set a timeout for the LLM processing
-        #debugging_logs
-        logger.debug("---------- searchai/reasoning/gemini_llm.py - process_with_gemini() - try - start ----------")
+
         content = await asyncio.wait_for(
             reasoner.generate_content(query, search_results, output_format),
             timeout=300.0
@@ -353,8 +342,7 @@ async def process_with_gemini(query: str, search_results: List[Dict[str, Any]], 
         if content.endswith("```"):
             content = content[:-3].strip()
             
-        #debugging_logs
-        logger.debug("---------- searchai/reasoning/gemini_llm.py - process_with_gemini() - try - end ----------")
+
         return content
     except asyncio.TimeoutError:
         raise LLMError("LLM processing timed out after 300 seconds")

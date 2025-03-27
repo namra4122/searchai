@@ -27,18 +27,15 @@ def setup_db():
     Set up the database engine and session factory.
     Should be called after the event loop is created.
     """
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - setup_db() - start ----------")
+    
     global engine, async_session
     if engine is None:
         engine = create_async_engine(
             POSTGRES_URI.replace('postgresql://', 'postgresql+asyncpg://').split('?')[0],
-            connect_args={"ssl": True},
             echo=True
         )
         async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - setup_db() - end ----------")
+    
 
 @asynccontextmanager
 async def get_session():
@@ -46,8 +43,7 @@ async def get_session():
     Async context manager for database sessions.
     Provides an async session and handles commit/rollback.
     """
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - get_session() - start ----------")
+    
     if async_session is None:
         setup_db()
     session = async_session()
@@ -59,8 +55,7 @@ async def get_session():
         logger.error(f"Database error: {e}")
         raise
     finally:
-        #debugging_logs
-        logger.debug("---------- searchai/db/db_handler.py - get_session() - end ----------")
+        
         await session.close()
 
 async def verify_tables():
@@ -85,16 +80,18 @@ async def init_db():
     """
     Initialize the database, creating tables if they don't exist.
     """
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - init_db() - start ----------")
+    
     setup_db()
     
     try:
+        logger.error(f"----------start try in init_db----------")
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+        logger.error(f"----------enginer begin in init_db----------")
         
         # Verify tables
         tables = await verify_tables()
+        logger.error(f"----------table verfied in init_db----------")
         expected_tables = {'user_queries', 'search_results', 'generated_documents'}
         missing_tables = expected_tables - set(tables)
         
@@ -109,8 +106,7 @@ async def init_db():
         raise
         
     logger.info("Database initialized")
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - init_db() - end ----------")
+    
 
 async def log_user_query(query_text: str, output_format: str) -> UserQuery:
     """
@@ -123,8 +119,7 @@ async def log_user_query(query_text: str, output_format: str) -> UserQuery:
     Returns:
         UserQuery: The created user query object
     """
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - log_user_query() - start ----------")
+    
     
     # Convert output format to uppercase and ensure it's valid
     try:
@@ -149,9 +144,7 @@ async def log_user_query(query_text: str, output_format: str) -> UserQuery:
     except Exception as e:
         logger.error(f"Failed to log user query: {e}")
         raise
-    finally:
-        #debugging_logs
-        logger.debug("---------- searchai/db/db_handler.py - log_user_query() - end ----------")
+        
 
 async def update_query_status(query_id, status):
     """
@@ -161,14 +154,12 @@ async def update_query_status(query_id, status):
         query_id (str): The ID of the query to update
         status (str): The new status (pending, processing, completed, failed)
     """
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - update_query_status() - start ----------")
+    
     async with get_session() as session:
         stmt = update(UserQuery).where(UserQuery.id == query_id).values(status=status)
         await session.execute(stmt)
         logger.info(f"Updated query {query_id} status to {status}")
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - update_query_status() - end ----------")
+    
 
 async def store_search_results(query_id, results):
     """
@@ -178,8 +169,7 @@ async def store_search_results(query_id, results):
         query_id (str): The ID of the associated user query
         results (list): List of search result dictionaries
     """
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - store_search_results() - start ----------")
+    
     async with get_session() as session:
         for result in results:
             search_result = SearchResult(
@@ -191,8 +181,7 @@ async def store_search_results(query_id, results):
             session.add(search_result)
         await session.commit()
         logger.info(f"Stored {len(results)} search results for query {query_id}")
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - store_search_results() - end ----------")
+    
 
 async def log_generated_document(query_id, file_path, output_format, file_size=0):
     """
@@ -204,8 +193,7 @@ async def log_generated_document(query_id, file_path, output_format, file_size=0
         output_format (str): Format of the generated document (markdown, pdf, ppt)
         file_size (int): Size of the file in bytes
     """
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - log_generated_document() - start ----------")
+    
     format_enum = OutputFormat[output_format.upper()]
     
     async with get_session() as session:
@@ -218,8 +206,7 @@ async def log_generated_document(query_id, file_path, output_format, file_size=0
         session.add(document)
         await session.commit()
         logger.info(f"Logged generated document: {file_path}")
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - log_generated_document() - end ----------")
+    
 
 async def get_query_history(limit=10):
     """
@@ -231,12 +218,10 @@ async def get_query_history(limit=10):
     Returns:
         list: List of UserQuery objects
     """
-    #debugging_logs
-    logger.debug("---------- searchai/db/db_handler.py - get_query_history() - start ----------")
+    
     async with get_session() as session:
         result = await session.execute(
             select(UserQuery).order_by(UserQuery.created_at.desc()).limit(limit)
         )
-        #debugging_logs
-        logger.debug("---------- searchai/db/db_handler.py - get_query_history() - end ----------")
+        
         return result.scalars().all()

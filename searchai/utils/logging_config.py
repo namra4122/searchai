@@ -1,9 +1,6 @@
-"""
-Logging configuration for the SearchAI application.
-"""
-
 import os
 import logging
+import warnings
 from datetime import datetime
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
@@ -14,11 +11,21 @@ from searchai.config import BASE_DIR
 LOGS_DIR = os.path.join(BASE_DIR, 'logs')
 os.makedirs(LOGS_DIR, exist_ok=True)
 
+for logger_name in logging.root.manager.loggerDict:
+    logging.getLogger(logger_name).setLevel(logging.INFO)
+
+
 def setup_logging():
     """
     Configure logging for the application.
-    Sets up both file and console logging.
+    Sets up file logging only (no console output).
     """
+    # Disable all warnings
+    warnings.filterwarnings('ignore')
+    
+    # Filter out specific Pydantic warnings
+    warnings.filterwarnings('ignore', category=DeprecationWarning, module='pydantic')
+    
     # Generate log filename with timestamp
     current_date = datetime.now().strftime('%Y%m%d')
     log_filename = f'search_{current_date}.log'
@@ -26,15 +33,16 @@ def setup_logging():
     
     # Create formatter
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        '%(levelname)s - %(message)s'  # Simplified format
     )
     
     # Configure root logger
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)  # Set to INFO to reduce verbosity
+    root_logger.setLevel(logging.INFO)  # Set to WARNING to reduce verbosity
     
     # Clear any existing handlers
-    root_logger.handlers = []
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
     
     # File handler with rotation
     file_handler = RotatingFileHandler(
@@ -46,27 +54,27 @@ def setup_logging():
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.INFO)
     
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(logging.WARNING)  # Show warnings and above in console
-    
     # Add handlers
     root_logger.addHandler(file_handler)
-    root_logger.addHandler(console_handler)
     
-    # Disable SQLAlchemy logging
-    logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)  # Suppress SQLAlchemy debug logs
-    logging.getLogger('sqlalchemy.orm').setLevel(logging.WARNING)  # Suppress ORM debug logs
+    # Disable SQLAlchemy logging completely (this is critical)
+    logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+    logging.getLogger('sqlalchemy').setLevel(logging.INFO)
     
     # Disable Pydantic warnings
-    logging.getLogger('pydantic').setLevel(logging.ERROR)  # Suppress Pydantic warnings
+    logging.getLogger('pydantic').setLevel(logging.INFO)  # More severe than ERROR
     
     # Disable asyncio debug logs
-    logging.getLogger('asyncio').setLevel(logging.WARNING)  # Suppress asyncio debug logs
+    logging.getLogger('asyncio').setLevel(logging.INFO)
     
-    # Log startup information
-    root_logger.info(f"Logging initialized. Log file: {log_filepath}")
+    # Disable CrewAI verbose logs
+    logging.getLogger('crewai').setLevel(logging.INFO)
+    
+    # Disable LiteLLM logs
+    logging.getLogger('litellm').setLevel(logging.INFO)
+    
+    # Log startup information (to file only)
+    logging.getLogger('searchai').info(f"Logging initialized. Log file: {log_filepath}")
 
 def get_logger(name):
     """
@@ -78,4 +86,6 @@ def get_logger(name):
     Returns:
         logging.Logger: Configured logger instance
     """
-    return logging.getLogger(name) 
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.WARNING)  # Set individual loggers to WARNING level
+    return logger

@@ -1,0 +1,69 @@
+version: '3.8'
+
+# Services configuration
+services:
+  # Main SearchAI application service
+  searchai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: searchai-app
+    depends_on:
+      - postgres
+    environment:
+      # Database connection settings
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/searchai
+      # API keys (consider using a .env file instead of hardcoding)
+      - SERPER_API_KEY=${SERPER_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # Other environment variables from .env.example
+      - LOG_LEVEL=INFO
+      - OUTPUT_DIR=/app/output
+    volumes:
+      # Volume for persisting generated output files
+      - searchai_output:/app/output
+    networks:
+      - searchai-network
+    restart: unless-stopped
+    # Command can be overridden with specific CLI arguments if needed
+    command: python main.py
+
+  # PostgreSQL database service
+  postgres:
+    image: postgres:15-alpine
+    container_name: searchai-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=searchai
+      # Optimize PostgreSQL for the application
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      # Volume for persisting database data
+      - postgres_data:/var/lib/postgresql/data
+      # Optional: mount init scripts for database setup
+      # - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - searchai-network
+    ports:
+      # Expose PostgreSQL port for external access/debugging
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Networks configuration
+networks:
+  searchai-network:
+    driver: bridge
+
+# Volumes configuration for data persistence
+volumes:
+  postgres_data:
+    driver: local
+  searchai_output:
+    driver: local
+
